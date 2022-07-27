@@ -4,7 +4,7 @@ from flask import abort, Markup, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, current_user
 from flask_admin.menu import MenuLink
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from itsdangerous import URLSafeTimedSerializer as Serializer
 from flask_admin.contrib.fileadmin import FileAdmin
 
 from . import db, login_manager
@@ -34,7 +34,7 @@ class User(UserMixin, db.Model):
         secondaryjoin=(followers.c.followed_id==id),
         backref=db.backref('followers', lazy='dynamic'), lazy='dynamic'
     )
-    
+
     def __repr__(self):
         return '<Email {}>'.format(self.email)
 
@@ -64,13 +64,13 @@ class User(UserMixin, db.Model):
 
     def set_student(self):
         self.student = Student(base=self)
-    
+
     def update_student(self, **kwargs):
         for column,value in kwargs.items():
             student = self.student
             setattr(student,column,value)
         db.session.commit()
-    
+
     def follow(self, user):
         if not self.is_following(user):
             self.followed.append(user)
@@ -111,7 +111,7 @@ class User(UserMixin, db.Model):
         except:
             return None
         return User.query.get(user_id)
-            
+
 
 class Student(db.Model):
     phone = db.Column(db.String(10))
@@ -194,16 +194,16 @@ class Course(db.Model):
     course_level = db.Column(db.String(100), nullable=False)
     course_description = db.Column(db.String(1000))
     mycourse = db.relationship('Mycourse', backref='Course', cascade="all, delete")
-    
+
 
 class Mycourse(db.Model):
-    id = db.Column(db.Integer, primary_key=True)  
+    id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
     time = db.Column(db.Time)
     endtime = db.Column(db.Time)
     cost = db.Column(db.Integer)
-    
+
 
 
 @login_manager.user_loader
@@ -273,7 +273,7 @@ class ShowLinkView(CustomView):
            return Markup(markupstring)
         else:
            return ""
-    
+
     def _qualification_formatter(view, context, model, name):
         if model.qualification_file:
            markupstring = f"<a href='{url_for('static', filename='docs/qualification/' + model.qualification_file)}'>{model.qualification_file}</a>"
@@ -291,12 +291,12 @@ class ShowLinkView(CustomView):
     column_formatters = {
         'experience_file': _experience_formatter,
         'achievement_file': _achievement_formatter,
-        'qualification_file': _qualification_formatter 
+        'qualification_file': _qualification_formatter
     }
 
 
 class UserView(CustomView):
-    column_exclude_list = ['hash_password',] 
+    column_exclude_list = ['hash_password',]
     column_searchable_list = ['username', 'email']
     column_filters = ['role']
 
@@ -316,15 +316,15 @@ class CourseView(ModelView):
 
 class LoggedInMenuLink(MenuLink):
     def is_accessible(self):
-        return current_user.is_authenticated  
+        return current_user.is_authenticated
 
 
-# For general models, admin.add_view(ModelView(User, db.session)) 
+# For general models, admin.add_view(ModelView(User, db.session))
 admin.add_view(UserView(User, db.session, category='Users'))
 admin.add_view(StudentView(Student, db.session, category='Users'))
 admin.add_view(TutorView(Tutor, db.session, category='Users'))
 
-admin.add_view(CannotDeleteView(Location, db.session)) 
+admin.add_view(CannotDeleteView(Location, db.session))
 admin.add_view(CourseView(Course, db.session))
 admin.add_view(CustomView(Mycourse, db.session))
 
@@ -335,5 +335,5 @@ admin.add_view(ShowLinkView(Qualification, db.session))
 path = op.join(op.dirname(__file__), 'static/docs/')
 admin.add_view(FileAdmin(path, '/static/docs/', name='Documents'))
 
-admin.add_link(LoggedInMenuLink(name='Account Activities', category='Settings', url="/admin/account-activities"))  
+admin.add_link(LoggedInMenuLink(name='Account Activities', category='Settings', url="/admin/account-activities"))
 admin.add_link(LoggedInMenuLink(name='Logout', category='Settings', url="/logout"))
